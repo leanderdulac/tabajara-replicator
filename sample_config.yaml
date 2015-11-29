@@ -1,0 +1,20 @@
+---
+
+binlog_position_file: binlog_position.log
+log_level: :debug
+connection_retry_limit: 100
+connection_retry_wait: 3
+
+schemas:
+  pagarme: pagarme
+
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  username: root
+
+postgres:
+  host: localhost
+  user: jonathanlima
+  dbname: postgres
+

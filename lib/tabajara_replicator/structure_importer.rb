@@ -125,23 +125,14 @@ module TabajaraReplicator
 
 			desc = "#{column['column_name'].escape_pg} #{type}"
 
-			desc += " DEFAULT '#{mangle_default(schema, column)}'" if column['default_value']
+			desc += " DEFAULT #{mangle_default(schema, column)}" if column['default_value']
 			desc += " NOT NULL" if column['nullable'] == 'NO'
 
 			desc
 		end
 
 		def mangle_default(schema, column)
-			column['default_value']
-			# if column['default_value'] == nil
-			# 	nil
-			# # elsif column['column_type'].start_with? 'enum('
-			# # 	# "'#{column['default_value']}'::#{schema}.#{column['data_type']}"
-			# # 	"#{column['default_value']}"
-			# else
-			# 	# column['default_value'].to_s.is_number? ? column['default_value'] : "'#{column['default_value']}'"
-			# 	"#{column['default_value']}"
-			# end
+			column['default_value'].to_s.is_number? ? column['default_value'] : "'#{column['default_value']}'"
 		end
 
 		def iterate_tables(where)

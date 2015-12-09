@@ -66,7 +66,7 @@ module TabajaraReplicator
 		def start_replication
 			Daemons.daemonize if config[:daemonize]
 
-			replicator = Replication.new(self)
+			replicator = Replicator.new(self)
 
 			Signal.trap(:INT) do
 				replicator.stop do

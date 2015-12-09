@@ -14,7 +14,7 @@ module TabajaraReplicator
 		end
 
 		def sync_tables(where, hints = [])
-			iterate_tables(where) do |db, table, structure|
+			fetch_tables(where) do |db, table, structure|
 				sync_table db, table, structure, hints
 			end
 		end
@@ -135,7 +135,7 @@ module TabajaraReplicator
 			column['default_value'].to_s.is_number? ? column['default_value'] : "'#{column['default_value']}'"
 		end
 
-		def iterate_tables(where)
+		def fetch_tables(where)
 			query = "
 			SELECT
 							t.TABLE_SCHEMA AS schema_name,

@@ -38,7 +38,11 @@ module TabajaraReplicator
 					end
 				end
 			end
+		end
 
+		def run(command)
+			puts command
+			app.pg.exec command
 		end
 
 		def sync_column(schema, table, column, target, hints)
@@ -74,7 +78,7 @@ module TabajaraReplicator
 
 			return if actions.empty?
 
-			puts "ALTER TABLE #{schema}.#{table.underscore} " + actions.join(", ")
+			run "ALTER TABLE #{schema}.#{table.underscore} " + actions.join(", ")
 		end
 
 		def create_column(schema, table, column, hints, should_create_table)
@@ -82,7 +86,7 @@ module TabajaraReplicator
 
 			sync_data_type schema, table, column if column['column_type'].start_with? 'enum('
 
-			puts "ALTER TABLE #{schema}.#{table.underscore} ADD #{desc}"
+			run "ALTER TABLE #{schema}.#{table.underscore} ADD #{desc}"
 		end
 
 		def create_table(schema, table, columns)
@@ -95,26 +99,22 @@ module TabajaraReplicator
 
 			query += ")"
 
-			puts query
+			run query
 		end
 
 		def sync_data_type(schema, table, column)
 			values = column['column_type'][5..-2].split(',')
 			target = load_target_enum(schema, table, column)
 
-			if target
+			if target.empty?
+				run "CREATE TYPE #{schema}.#{column['data_type']} AS ENUM (#{values.join(", ")})"
+			else
 				actions = []
 				added = values - target
 
 				added.each do |v|
-					actions << "ADD VALUE #{v}"
+					run "ALTER TYPE #{schema}.#{column['data_type']} ADD VALUE #{v}"
 				end
-
-				return if actions.empty?
-
-				puts "ALTER TYPE #{schema}.#{column['data_type']} #{actions.join(", ")}"
-			else
-				puts "CREATE TYPE #{schema}.#{column['data_type']} AS ENUM (#{values.join(", ")})"
 			end
 		end
 
@@ -132,13 +132,16 @@ module TabajaraReplicator
 		end
 
 		def mangle_default(schema, column)
-			if column['default_value'] == nil
-				nil
-			elsif column['column_type'].start_with? 'enum('
-				"'#{column['default_value']}'::#{schema}.#{column['data_type']}"
-			else
-				column['default_value'].to_s.is_number? ? column['default_value'] : "'#{column['default_value']}'"
-			end
+			column['default_value']
+			# if column['default_value'] == nil
+			# 	nil
+			# # elsif column['column_type'].start_with? 'enum('
+			# # 	# "'#{column['default_value']}'::#{schema}.#{column['data_type']}"
+			# # 	"#{column['default_value']}"
+			# else
+			# 	# column['default_value'].to_s.is_number? ? column['default_value'] : "'#{column['default_value']}'"
+			# 	"#{column['default_value']}"
+			# end
 		end
 
 		def iterate_tables(where)
@@ -228,7 +231,7 @@ module TabajaraReplicator
 			indices = app.pg.exec("
 														SELECT
 																i.relname as index_name,
-																IDX(ix.indkey, a.attnum) AS column_index,
+																ix.indkey::text AS column_index,
 																a.attname as column_name,
 																ix.indisunique AS is_unique,
 																ix.indisprimary AS is_primary

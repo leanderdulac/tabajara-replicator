@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+
+require 'tabajara_replicator'
+
+TabajaraReplicator.application.parse_config config: 'sample_config.yaml'
+
+puts TabajaraReplicator::PostgresDriver.find_table({ name: 'transactions' }).inspect
+

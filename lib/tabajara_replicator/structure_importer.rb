@@ -14,31 +14,57 @@ module TabajaraReplicator
 		end
 
 		def sync_tables(where, hints = [])
-			iterate_tables(where) do |db, table, structure|
-				sync_table db, table, structure, hints
+			MySQLDriver.find_tables(where).each do |t|
+				sync_table t, hints
 			end
 		end
 
-		def sync_table(schema, table, structure, hints = [])
+		def sync_table(table, hints = [])
 			target_schema = app.config[:schemas][schema.to_sym]
-			target_structure = load_target(target_schema, table)
-			is_new_table = target_structure[:columns].values.empty?
+			target = PostgresDriver.find_table(schema: target_schema, name: table.name)
 
-			if is_new_table
-				create_table schema, table, structure[:columns]
-			else
-				structure[:columns].each do |c|
-					target = target_structure[:columns].find { |t| t['column_name'] == c['column_name'] }
-
-					if target
-						sync_column schema, table, c, target, hints
-					else
-						create_column schema, table, c, hints, is_new_table
-						is_new_table = false
-					end
+			if target
+				table.columns.each do |c|
+					sync_column target, c, hints
 				end
+			else
+				create_table target_schema, table, hints
+
+				# Find the target again
+				target = PostgresDriver.find_table(schema: target_schema, name: table.name)
 			end
 
+			table.indices.each do |i|
+				sync_index target, i, hints
+			end
+		end
+
+		def sync_column(target, column, hints)
+			query = nil
+			target_column = target.column_by_name(column.name)
+
+			# Sync target data type, if needed
+			sync_type target, column.data_type, hints
+
+			if target_column
+				actions = []
+
+				# Change data type
+				if column.data_type != target_column.data_type
+					actions << "ALTER COLUMN #{target_column.name} TYPE #{column.data_type.schema}.#{column.data_type.name}"
+				end
+					
+				if column.
+
+				query = "ALTER TABLE #{table.schema}.#{table.name} " + actions.join(", ") unless actions.empty?
+			else
+
+			end
+
+			puts query if query
+		end
+
+		def sync_type(target, type, hints)
 		end
 
 		def sync_column(schema, table, column, target, hints)
